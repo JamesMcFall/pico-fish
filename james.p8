@@ -7,7 +7,7 @@ fishes= {}
 weeds = {}
 weed_heights={0.6,1.0,0.8}
 frame =0
-hook  ={x=0,y=0,r=3}
+hook  ={x=0,y=0,sx=0,sy=0,tx=0,ty=0,r=3}
 crsr  ={x=0,y=6,dx=0,dy=0}
 player_score=0
 player_score_pending=0
@@ -39,16 +39,22 @@ function _init ()
   palt(0,false)
   palt(14,true)
   timers.level=new_timer(60*30)
+  timers.cast=new_timer(1*30)
+  timers.reel=new_timer(1*15)
   start_level()
 end
 
 function start_level ()
   hook.y=64
   hook.x=64
+  hook.sy=-8
+  hook.sx=64
+  hook.ty=64
+  hook.tx=64
   crsr.x=64
   crsr.y=64
   metastate="game"
-		state="casting" 
+		state="scoring" 
 
   make_weed(30, 3)
   make_weed(75, 2)
@@ -127,19 +133,20 @@ end
 
 -- casting
 function state_casting()
- hook.x=lerp(hook.x,0.5,crsr.x)
- hook.y+=2
+ hook.tx=lerp(hook.tx,0.5,crsr.x)
+ hook.y=lerp(hook.sy,timers.cast.p,hook.ty)
+ hook.x=lerp(hook.sx,timers.cast.p,hook.tx)
    
- if hook.y>crsr.y then
+ if timers.cast.elf then
   state="fishing"
  end
 end
 
 -- reeling
 function state_reeling()
- if hook.y<-hook.r then
-  
+ if timers.reel.elf then
   state="scoring"
+
   for i=#fishes,1,-1 do
    local fish=fishes[i]
    if fish.hooked then
@@ -150,8 +157,8 @@ function state_reeling()
   end
     
  else
-  
-  hook.y-=4
+  hook.y=lerp(hook.sy,timers.reel.p,hook.ty)
+  hook.x=lerp(hook.sx,timers.reel.p,hook.tx)
  
   for fish in all(fishes) do
    if not fish.hooked then
@@ -189,10 +196,20 @@ function update_game ()
 
   if btnp(❎) and state == "fishing" then
     state = "reeling"
+    start_timer(timers.reel)
+    hook.sx=hook.x
+    hook.sy=hook.y
+    hook.tx=hook.x
+    hook.ty=-16
   end
   
   if btnp(❎) and state == "scoring" then
     state = "casting"
+    start_timer(timers.cast)
+    hook.sx=hook.x
+    hook.sy=-16
+    hook.tx=hook.x
+    hook.ty=crsr.y
   end
   
   crsr.dx=mid(-5,crsr.dx,5)
